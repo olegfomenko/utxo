@@ -8,7 +8,8 @@ contract UTXO is IUTXO {
     using ECDSA for bytes32;
 
     uint256 public constant N = 32;
-    uint256 public constant SECP256K1_ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
+    uint256 public constant SECP256K1_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+    uint256 public constant SECP256K1_P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
 
     ECPoint public H = ECPoint(0x87dd0a2e880b43916d11511797fc9639fa44ebec2e36ee7f711d511745502834, 0x43f58f221b1c62788c28bf8b11bb271fb1f466d5e4ee56d1649414d1ca027bea);
     ECPoint public G = ECPoint(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798, 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8);
@@ -100,7 +101,7 @@ contract UTXO is IUTXO {
 
     function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) internal view {
         (uint256 _x1, uint256 _y1) = ecBaseScallarMul(_witness._s);
-        _hash = keccak256(abi.encodePacked(_hash, _key._x, _key._y));
+        _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
         
 
         (uint256 _x2, uint256 _y2) = ecScallarMul(_key._x, _key._y, uint256(_hash));
@@ -148,7 +149,7 @@ contract UTXO is IUTXO {
             _r[_i] = ECPoint(_x, _y);
         }
 
-        bytes32 _e0 = hash(_r);
+        bytes32 _e0 = hashPoints(_r);
 
         (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
         for (uint _i = 0; _i < N; _i++) { 
@@ -166,28 +167,32 @@ contract UTXO is IUTXO {
     }
 
     function ecScallarMul(uint256 _x, uint256 _y, uint256 _k) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecMul(_k, _x, _y, 0, SECP256K1_ORDER);
+        return EllipticCurve.ecMul(_k, _x, _y, 0, SECP256K1_P);
     }
 
     function ecAdd(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecAdd(_x1, _y1, _x2, _y2, 0, SECP256K1_ORDER);
+        return EllipticCurve.ecAdd(_x1, _y1, _x2, _y2, 0, SECP256K1_P);
     }
 
     function ecSub(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecSub(_x1, _y1, _x2, _y2, 0, SECP256K1_ORDER);
+        return EllipticCurve.ecSub(_x1, _y1, _x2, _y2, 0, SECP256K1_P);
     }
 
     function pow2(uint256 _i) internal pure returns (uint256)  {
         return 2 ** _i;
     }
 
-    function hash(ECPoint[] memory _points) internal pure returns (bytes32) {
+    function hashPoints(ECPoint[] memory _points) internal pure returns (bytes32) {
         bytes memory _data;
         for (uint _i = 0; _i < _points.length; _i++) {
             _data = abi.encodePacked(_data, _points[_i]._x, _points[_i]._y);
         }
 
-        return keccak256(_data);
+        return hash(_data);
+    }
+
+    function hash(bytes memory _data) internal pure returns (bytes32) {
+        bytes32(uint256(keccak256(_data)) % SECP256K1_N);
     }
 }
     
