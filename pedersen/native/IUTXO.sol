@@ -1,5 +1,4 @@
-pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.0;
 
 /**
  * @title UTXO-ETH interface
@@ -24,17 +23,16 @@ interface IUTXO {
 
     struct Witness {
         ECPoint _r;
-        uint256 _u;
-        uint256 _v;
+        uint256 _s;
     }
 
     function initialize(ECPoint memory _commitment, Proof memory _proof) external returns (uint256);
 
     function deposit(ECPoint memory _publicKey) payable external returns (uint256);
 
-    function withdraw(uint256 _id, address _to, uint256 _amount, bytes memory _signature) external;
+    function withdraw(uint256 _id, address payable _to, uint256 _amount, ECPoint memory _publicKey, bytes memory _signature) external;
 
-    function transfer(uint256[] memory _inputs, uint256[] memory _outputs, Witness[] memory _witnesses) external;
+    function transfer(uint256[] memory _inputs, uint256[] memory _outputs, Witness memory _witness) external;
 
     function utxo(uint256 _id) external view returns (UTXO memory);
 }
