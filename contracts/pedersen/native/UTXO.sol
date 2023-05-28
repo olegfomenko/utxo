@@ -19,7 +19,7 @@ contract UTXO is IUTXO {
     function initialize(ECPoint memory _commitment, Proof memory _proof) public override returns (uint256) {
         verifyRangeProof(_commitment, _proof);
         uint256 _id = utxos.length;
-        utxos[_id] = UTXO(_commitment, false);
+        utxos.push(UTXO(_commitment, false));
         return _id;
     }
 
@@ -27,22 +27,22 @@ contract UTXO is IUTXO {
         (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, msg.value);
         (_x, _y) = ecAdd(_x, _y, _publicKey._x, _publicKey._y);
         uint256 _id = utxos.length;
-        utxos[_id] = UTXO(ECPoint(_x, _y), true);
+        utxos.push(UTXO(ECPoint(_x, _y), true));
         return _id;
     }
 
-    function withdraw(uint256 _id, address payable _to, uint256 _amount, ECPoint memory _publicKey, bytes memory _signature) public override{
+    function withdraw(uint256 _id, address payable _to, uint256 _amount, Witness memory _witness) public override{
         UTXO memory _utxo = utxos[_id];
         require(_utxo._valuable, "utxo should be valuable");
 
         (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, _amount);
-        (_x, _y) = ecAdd(_x, _y, _publicKey._x, _publicKey._y);
+        (_x, _y) = ecSub(_utxo._c._x, _utxo._c._y, _x, _y);
 
-        require(_x == _utxo._c._x, "invalid commitment: x does not match");
-        require(_y == _utxo._c._y, "invalid commitment: y doesn not match");
+        bytes32 _hash = keccak256(abi.encodePacked(_id, _to));
+        verifyWitness(ECPoint(_x, _y), _witness, _hash);
 
-        address _target = getAddress(_publicKey);
-        require(_target == keccak256(abi.encodePacked(_id, _to)).recover(_signature), "invalid signature");
+        _utxo._valuable = false;
+        utxos[_id] = _utxo;
 
         _to.transfer(_amount);
     }
@@ -130,11 +130,11 @@ contract UTXO is IUTXO {
     //     require(_y1 == _y2, "witnes verification falied: y");
     // }
 
-    function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) internal view{
+    function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) internal view {
         require(_proof._c.length == N, "invalid _c length");
         require(_proof._s.length == N, "invalid _s length");
 
-        ECPoint[] memory _r = new ECPoint[](_proof._c.length);
+        ECPoint[] memory _r = new ECPoint[](N);
 
         for (uint _i = 0; _i < N; _i++) {
             (uint256 _sigX, uint256 _sigY) = ecBaseScallarMul(_proof._s[_i]);
@@ -152,7 +152,7 @@ contract UTXO is IUTXO {
         bytes32 _e0 = hashPoints(_r);
 
         (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
-        for (uint _i = 0; _i < N; _i++) { 
+        for (uint _i = 1; _i < N; _i++) { 
             (_x, _y) = ecAdd(_x, _y, _proof._c[_i]._x, _proof._c[_i]._y);
         }
 
@@ -192,7 +192,7 @@ contract UTXO is IUTXO {
     }
 
     function hash(bytes memory _data) internal pure returns (bytes32) {
-        bytes32(uint256(keccak256(_data)) % SECP256K1_N);
+        bytes32(uint256(keccak256(_data)) % SECP256K1_P);
     }
 }
     
