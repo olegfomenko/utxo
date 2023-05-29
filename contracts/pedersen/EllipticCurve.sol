@@ -75,6 +75,14 @@ library EllipticCurve {
         }
     }
 
+    function ecNeg(uint256[2] memory p) pure internal returns (uint256[2] memory) {
+		// The prime q in the base field F_q for G1
+		uint q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+		if (p[0] == 0 && p[1] == 0)
+			return [uint256(0), uint256(0)];
+		return [p[0], q - (p[1] % q)];
+	}
+
     /*
        Checks if the points x, y exists on alt_bn_128 curve
     */

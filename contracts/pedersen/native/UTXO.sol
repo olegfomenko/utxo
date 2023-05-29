@@ -23,7 +23,7 @@ contract UTXO is IUTXO {
     }
 
     function deposit(ECPoint memory _publicKey) payable public override returns (uint256) {
-        (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, msg.value);
+        (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, msg.value);
         (_x, _y) = ecAdd(_x, _y, _publicKey._x, _publicKey._y);
         uint256 _id = utxos.length;
         utxos.push(UTXO(ECPoint(_x, _y), true));
@@ -34,10 +34,10 @@ contract UTXO is IUTXO {
         UTXO memory _utxo = utxos[_id];
         require(_utxo._valuable, "utxo should be valuable");
 
-        (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, _amount);
+        (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, _amount);
         (_x, _y) = ecSub(_utxo._c._x, _utxo._c._y, _x, _y);
 
-        bytes32 _hash = keccak256(abi.encodePacked(_id, _to));
+        bytes32 _hash = hash(abi.encodePacked(_id, _to));
         verifyWitness(ECPoint(_x, _y), _witness, _hash);
 
         _utxo._valuable = false;
@@ -83,7 +83,7 @@ contract UTXO is IUTXO {
             utxos[_i] = _utxo;
         }
 
-        bytes32 _hash = keccak256(_data);
+        bytes32 _hash = hash(_data);
         verifyWitness(ECPoint(_x, _y), _witness, _hash);
     }
 
@@ -97,19 +97,17 @@ contract UTXO is IUTXO {
         return address(uint160(bytes20(_hash)));
     }
 
-
     function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) internal view {
-        (uint256 _x1, uint256 _y1) = ecBaseScallarMul(_witness._s);
+        (uint256 _x1, uint256 _y1) = ecBaseScalarMul(_witness._s);
         _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
 
 
-        (uint256 _x2, uint256 _y2) = ecScallarMul(_key._x, _key._y, uint256(_hash));
+        (uint256 _x2, uint256 _y2) = ecScalarMul(_key._x, _key._y, uint256(_hash));
         (_x2, _y2) = ecSub(_witness._r._x, _witness._r._y, _x2, _y2);
 
         require(_x1 == _x2, "witnes verification falied: x");
         require(_y1 == _y2, "witnes verification falied: y");
     }
-
 
     function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) public view {
         require(_proof._c.length == N, "invalid _c length");
@@ -123,18 +121,34 @@ contract UTXO is IUTXO {
                 _i
             );
 
-            (uint256 _sigX, uint256 _sigY) = ecBaseScallarMul(_proof._s[_i]);
+            (uint256 _sigX, uint256 _sigY) = ecBaseScalarMul(_proof._s[_i]);
 
-            (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, pow2(_i));
+            console.log(
+                "Si*G: %s %s",
+                _sigX,
+                _sigY
+            );
+
+            (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, pow2(_i));
             (_x, _y) = ecSub(_proof._c[_i]._x, _proof._c[_i]._y, _x, _y);
-            (_x, _y) = ecScallarMul(_x, _y, _proof._e0);
+            (_x, _y) = ecScalarMul(_x, _y, _proof._e0);
             (_x, _y) = ecSub(_sigX, _sigY, _x, _y);
 
-            bytes memory _data =  abi.encodePacked(_x, _y);
-            bytes32 _ei = keccak256(_data);
-            (_x, _y) = ecScallarMul(_proof._c[_i]._x, _proof._c[_i]._y, uint256(_ei));
-            ECPoint memory _ri = ECPoint(_x, _y);
-            _r[_i] = _ri;
+            bytes32 _ei = hash(abi.encodePacked(_x, _y));
+
+            console.log(
+                "Ei: %s",
+                uint256(_ei)
+            );
+
+            (_x, _y) = ecScalarMul(_proof._c[_i]._x, _proof._c[_i]._y, uint256(_ei));
+            _r[_i] = ECPoint(_x, _y);
+
+            console.log(
+                "r[i]: %s %s",
+                _r[_i]._x,
+                _r[_i]._y
+            );
         }
 
         bytes32 _e0 = hashPoints(_r);
@@ -154,11 +168,11 @@ contract UTXO is IUTXO {
         require(_y == _commitment._y,"failed to verify proof: y");
     }
 
-    function ecBaseScallarMul(uint256 _k) internal view returns (uint256, uint256) {
-        return ecScallarMul(G._x, G._y, _k);
+    function ecBaseScalarMul(uint256 _k) internal view returns (uint256, uint256) {
+        return ecScalarMul(G._x, G._y, _k);
     }
 
-    function ecScallarMul(uint256 _x, uint256 _y, uint256 _k) internal view returns (uint256, uint256) {
+    function ecScalarMul(uint256 _x, uint256 _y, uint256 _k) internal view returns (uint256, uint256) {
         uint256[2] memory _res = EllipticCurve.ecMul([_x, _y], _k);
         return (_res[0], _res[1]);
     }
@@ -169,8 +183,8 @@ contract UTXO is IUTXO {
     }
 
     function ecSub(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal view returns (uint256, uint256) {
-        _y2 = (EllipticCurve.P - _y2) % EllipticCurve.P;
-        return ecAdd(_x1, _y1, _x2, _y2);
+        uint256[2] memory _negP2 = EllipticCurve.ecNeg([_x2, _y2]);
+        return ecAdd(_x1, _y1, _negP2[0], _negP2[1]);
     }
 
     function pow2(uint256 _i) internal pure returns (uint256)  {
