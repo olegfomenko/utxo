@@ -133,7 +133,6 @@ describe("UTXO", () => {
     let output = await utxoContract.utxos(1);
     assert.equal(output._valuable, false);
 
-
     await utxoContract.transfer([0], [1],
       {
         "_r": {

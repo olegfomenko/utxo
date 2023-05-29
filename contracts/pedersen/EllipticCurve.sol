@@ -1,7 +1,7 @@
 pragma solidity >=0.6.0;
 
 /**
- * Heavily referenced from https://github.com/ethereum/py_ecc/blob/master/py_ecc/bn128/bn128_curve.py
+ * Referenced from https://github.com/kendricktan/heiswap-dapp/blob/master/contracts/AltBn128.sol
 */
 
 library EllipticCurve {
