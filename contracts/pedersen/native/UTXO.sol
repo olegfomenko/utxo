@@ -9,6 +9,7 @@ contract UTXO is IUTXO {
     using ECDSA for bytes32;
 
     uint256 public constant N = 8;
+    bytes32 public constant DEPOSIT_HASH = 0x2a50cec61cf2e3d092043e80d8a7623335ebd3c95917e08b59b0126ccd01011d;
 
     ECPoint public H = ECPoint(0x2cb8b246dbf3d5b5d3e9f75f997cd690d205ef2372292508c806d764ee58f4db, 0x1fd7b632da9c73178503346d9ebbb60cc31104b5b8ce33782eaaecaca35c96ba);
     ECPoint public G = ECPoint(0x2f21e4931451bb6bd8032d52b90a81859fd1abba929df94621a716ebbe3456fd, 0x171c62d5d61cc08d176f2ea3fe42314a89b0196ea6c68ed1d9a4c426d47c3232);
@@ -22,11 +23,15 @@ contract UTXO is IUTXO {
         return _id;
     }
 
-    function deposit(ECPoint memory _publicKey) payable public override returns (uint256) {
+    function deposit(ECPoint memory _publicKey, Witness memory _witness) payable public override returns (uint256) {
+        verifyWitness(_publicKey, _witness, DEPOSIT_HASH);
+
         (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, msg.value);
         (_x, _y) = ecAdd(_x, _y, _publicKey._x, _publicKey._y);
+
         uint256 _id = utxos.length;
         utxos.push(UTXO(ECPoint(_x, _y), true));
+
         return _id;
     }
 

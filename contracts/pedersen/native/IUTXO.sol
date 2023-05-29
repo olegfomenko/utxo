@@ -28,7 +28,7 @@ interface IUTXO {
 
     function initialize(ECPoint memory _commitment, Proof memory _proof) external returns (uint256);
 
-    function deposit(ECPoint memory _publicKey) payable external returns (uint256);
+    function deposit(ECPoint memory _publicKey, Witness memory _witness) payable external returns (uint256);
 
     function withdraw(uint256 _id, address payable _to, uint256 _amount,  Witness memory _witness) external;
 
