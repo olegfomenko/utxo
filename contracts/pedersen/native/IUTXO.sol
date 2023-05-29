@@ -33,6 +33,4 @@ interface IUTXO {
     function withdraw(uint256 _id, address payable _to, uint256 _amount,  Witness memory _witness) external;
 
     function transfer(uint256[] memory _inputs, uint256[] memory _outputs, Witness memory _witness) external;
-
-    function utxo(uint256 _id) external view returns (UTXO memory);
 }

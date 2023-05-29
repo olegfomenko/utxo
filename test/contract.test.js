@@ -47,14 +47,61 @@ describe("UTXO", () => {
     console.log(utxoCreated);
   });
 
-  // it("Transfer flow", async() => {
-  //   let txDepositUTXO = await utxoContract.deposit({"_x": "14734274792892250538583130710326688001821315279524611705412636079378106838212", "_y": "12843510926868596022450520986186966252357342112722560806171712712835363742964"}, { value: "100"});
-  //   let utxoCreated = await utxoContract.utxos(txDepositUTXO.v);
-  //   console.log(utxoCreated);
-  //
-  //
-  //   let txInitializeUTXO = await utxoContract.initialize(commitment, proof)
-  //   utxoCreated = await utxoContract.utxos(txInitializeUTXO.v);
-  //   console.log(utxoCreated);
-  // })
+  // it("Check witness", async() => {
+  //   await utxoContract.verifyWitness(
+  //     {"_x": "15639559675625734025795989354902210429480226575270834412335467657634556514696", "_y": "13808122845547863717923179222109646155746415390670120415468336630118037023431"},
+  //     {
+  //       "_r": {"_x": "5109730908197937793186988043505009936047779970479868047734172723071291139481", "_y": "5695537219841674439580460240695926440179084672260849397819152443008669244519"},
+  //       "_s": "17334092223146687468005548295017179129455424012029209148307492557995637382354",
+  //     },
+  //     "0x2bdad7e530f187ef2cb15881f641bb9020c9b9ee163a934d4b49e7d916baadf9"
+  //   )
+  // });
+
+  it("Deposit & Withdraw", async() => {
+    await utxoContract.deposit({"_x": "15639559675625734025795989354902210429480226575270834412335467657634556514696", "_y": "13808122845547863717923179222109646155746415390670120415468336630118037023431"}, { value: "100"});
+    let u = await utxoContract.utxos(0);
+    assert.equal(u._valuable, true);
+
+    await utxoContract.withdraw(
+      0,
+      "0xF65F3f18D9087c4E35BAC5b9746492082e186872",
+      100,
+      {
+        "_r": {"_x": "16027749843855789499543341052781208687691596897196959868735514864449663931922", "_y": "17200311890797201156272678535458899524730867745810239045062404967632337106280"},
+        "_s": "6588726764565379866919810050369385337140705932980820912972156497528491442968",
+      },
+    )
+
+    u = await utxoContract.utxos(0);
+    assert.equal(u._valuable, false);
+  });
+
+
+  it("Deposit & Initialize & Transfer", async() => {
+    await utxoContract.deposit({"_x": "15639559675625734025795989354902210429480226575270834412335467657634556514696", "_y": "13808122845547863717923179222109646155746415390670120415468336630118037023431"}, { value: "100"});
+    await utxoContract.initialize(commitment, proof);
+
+    let input = await utxoContract.utxos(0);
+    assert.equal(input._valuable, true);
+
+    let output = await utxoContract.utxos(1);
+    assert.equal(output._valuable, false);
+
+
+    await utxoContract.transfer([0], [1],
+      {
+        "_r": {"_x": "17121664940841461257542537843583164765236574899240789196012433005513532115071", "_y": "6620347158522527305522704779785054649295215964477259343664434486123127475147"},
+        "_s": "21164695856547312510960673586994436853473220592925260677258060702329315256932",
+      },
+    );
+
+    input = await utxoContract.utxos(0);
+    assert.equal(input._valuable, false);
+
+    output = await utxoContract.utxos(1);
+    assert.equal(output._valuable, true);
+  })
+
+
 });

@@ -56,6 +56,9 @@ contract UTXO is IUTXO {
             UTXO memory _utxo  = utxos[_outputs[_i]];
             require(!_utxo._valuable, "utxo should be unvaluable");
 
+            _utxo._valuable = true;
+            utxos[_outputs[_i]] = _utxo;
+
             _data = abi.encodePacked(_data, _outputs[_i]);
 
             if(_i == 0){
@@ -64,9 +67,6 @@ contract UTXO is IUTXO {
             }
 
             (_x, _y) = ecAdd(_utxo._c._x, _utxo._c._y, _x, _y);
-
-            _utxo._valuable = true;
-            utxos[_i] = _utxo;
         }
 
         _data = abi.encodePacked(_data, "constant string");
@@ -74,22 +74,15 @@ contract UTXO is IUTXO {
         for (uint _i = 0; _i < _inputs.length; _i++) {
             UTXO memory _utxo = utxos[_inputs[_i]];
             require(_utxo._valuable, "utxo should be valuable");
+            _utxo._valuable = false;
+            utxos[_inputs[_i]] = _utxo;
 
             _data = abi.encodePacked(_data, _inputs[_i]);
-
             (_x, _y) = ecSub(_x, _y, _utxo._c._x, _utxo._c._y);
-
-            _utxo._valuable = false;
-            utxos[_i] = _utxo;
         }
 
         bytes32 _hash = hash(_data);
         verifyWitness(ECPoint(_x, _y), _witness, _hash);
-    }
-
-    function utxo(uint256 _id) public override view returns (UTXO memory) {
-        require(_id < utxos.length, "id out of bounds");
-        return utxos[_id];
     }
 
     function getAddress(ECPoint memory _publicKey) internal pure returns (address) {
@@ -97,16 +90,15 @@ contract UTXO is IUTXO {
         return address(uint160(bytes20(_hash)));
     }
 
-    function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) internal view {
+    function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) public view {
         (uint256 _x1, uint256 _y1) = ecBaseScalarMul(_witness._s);
         _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
-
 
         (uint256 _x2, uint256 _y2) = ecScalarMul(_key._x, _key._y, uint256(_hash));
         (_x2, _y2) = ecSub(_witness._r._x, _witness._r._y, _x2, _y2);
 
-        require(_x1 == _x2, "witnes verification falied: x");
-        require(_y1 == _y2, "witnes verification falied: y");
+        require(_x1 == _x2, "witness verification failed: x");
+        require(_y1 == _y2, "witness verification failed: y");
     }
 
     function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) public view {
@@ -116,48 +108,18 @@ contract UTXO is IUTXO {
         ECPoint[] memory _r = new ECPoint[](N);
 
         for (uint256 _i = 0; _i < N; _i++) {
-            console.log(
-                "Calculating for %s",
-                _i
-            );
-
             (uint256 _sigX, uint256 _sigY) = ecBaseScalarMul(_proof._s[_i]);
-
-            console.log(
-                "Si*G: %s %s",
-                _sigX,
-                _sigY
-            );
-
             (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, pow2(_i));
             (_x, _y) = ecSub(_proof._c[_i]._x, _proof._c[_i]._y, _x, _y);
             (_x, _y) = ecScalarMul(_x, _y, _proof._e0);
             (_x, _y) = ecSub(_sigX, _sigY, _x, _y);
 
             bytes32 _ei = hash(abi.encodePacked(_x, _y));
-
-            console.log(
-                "Ei: %s",
-                uint256(_ei)
-            );
-
             (_x, _y) = ecScalarMul(_proof._c[_i]._x, _proof._c[_i]._y, uint256(_ei));
             _r[_i] = ECPoint(_x, _y);
-
-            console.log(
-                "r[i]: %s %s",
-                _r[_i]._x,
-                _r[_i]._y
-            );
         }
 
         bytes32 _e0 = hashPoints(_r);
-
-        console.log(
-            "E0: %s",
-            uint256(_e0)
-        );
-
         (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
         for (uint _i = 1; _i < N; _i++) {
             (_x, _y) = ecAdd(_x, _y, _proof._c[_i]._x, _proof._c[_i]._y);
