@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "./IUTXO.sol";
 import "../EllipticCurve.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "hardhat/console.sol";
 
 contract UTXO is IUTXO {
     using ECDSA for bytes32;
@@ -62,7 +63,7 @@ contract UTXO is IUTXO {
             if(_i == 0){
                 (_x, _y) = (_utxo._c._x, _utxo._c._y);
                 continue;
-            } 
+            }
 
             (_x, _y) = ecAdd(_utxo._c._x, _utxo._c._y, _x, _y);
 
@@ -102,7 +103,7 @@ contract UTXO is IUTXO {
     function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) internal view {
         (uint256 _x1, uint256 _y1) = ecBaseScallarMul(_witness._s);
         _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
-        
+
 
         (uint256 _x2, uint256 _y2) = ecScallarMul(_key._x, _key._y, uint256(_hash));
         (_x2, _y2) = ecSub(_witness._r._x, _witness._r._y, _x2, _y2);
@@ -116,7 +117,7 @@ contract UTXO is IUTXO {
     //     ECPoint[] memory _data = new ECPoint[](2);
     //     _data[0] = _commitment;
     //     _data[1] = _witness._r;
-        
+
     //     bytes32 _e  = keccak256(abi.encodePacked(hash(_data), _hash));
 
     //     (uint256 _x1, uint256 _y1) = ecScallarMul(_commitment._x, _commitment._y, uint256(_e));
@@ -130,13 +131,18 @@ contract UTXO is IUTXO {
     //     require(_y1 == _y2, "witnes verification falied: y");
     // }
 
-    function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) internal view {
+    function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) public view {
         require(_proof._c.length == N, "invalid _c length");
         require(_proof._s.length == N, "invalid _s length");
 
         ECPoint[] memory _r = new ECPoint[](N);
 
-        for (uint _i = 0; _i < N; _i++) {
+        for (uint256 _i = 0; _i < N; _i++) {
+            console.log(
+                "Calculating for %s",
+                _i
+            );
+
             (uint256 _sigX, uint256 _sigY) = ecBaseScallarMul(_proof._s[_i]);
 
             (uint256 _x, uint256 _y) = ecScallarMul(H._x, H._y, pow2(_i));
@@ -144,9 +150,11 @@ contract UTXO is IUTXO {
             (_x, _y) = ecScallarMul(_x, _y, _proof._e0);
             (_x, _y) = ecSub(_sigX, _sigY, _x, _y);
 
-            bytes32  _ei = keccak256(abi.encodePacked(_x, _y));
+            bytes memory _data =  abi.encodePacked(_x, _y);
+            bytes32 _ei = keccak256(_data);
             (_x, _y) = ecScallarMul(_proof._c[_i]._x, _proof._c[_i]._y, uint256(_ei));
-            _r[_i] = ECPoint(_x, _y);
+            ECPoint memory _ri = ECPoint(_x, _y);
+            _r[_i] = _ri;
         }
 
         bytes32 _e0 = hashPoints(_r);
@@ -179,7 +187,7 @@ contract UTXO is IUTXO {
     }
 
     function pow2(uint256 _i) internal pure returns (uint256)  {
-        return 2 ** _i;
+        return uint256(2) ** _i;
     }
 
     function hashPoints(ECPoint[] memory _points) internal pure returns (bytes32) {
