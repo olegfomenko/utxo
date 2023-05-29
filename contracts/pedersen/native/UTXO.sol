@@ -139,14 +139,19 @@ contract UTXO is IUTXO {
 
         bytes32 _e0 = hashPoints(_r);
 
+        console.log(
+            "E0: %s",
+            uint256(_e0)
+        );
+
         (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
         for (uint _i = 1; _i < N; _i++) {
             (_x, _y) = ecAdd(_x, _y, _proof._c[_i]._x, _proof._c[_i]._y);
         }
 
-        require(uint256(_e0) == _proof._e0);
-        require(_x == _commitment._x);
-        require(_y == _commitment._y);
+        require(uint256(_e0) == _proof._e0, "failed to verify proof: e0");
+        require(_x == _commitment._x,"failed to verify proof: x");
+        require(_y == _commitment._y,"failed to verify proof: y");
     }
 
     function ecBaseScallarMul(uint256 _k) internal view returns (uint256, uint256) {
