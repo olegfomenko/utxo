@@ -9,10 +9,21 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const utxo = await ethers.getContractFactory("UTXO");
-  const contract = await utxo.deploy();
+  const lib = await ethers.getContractFactory("EllipticCurve");
+  const libContract = await lib.deploy();
 
-  console.log("Contract deployed at:", contract.address);
+  console.log("Contract deployed at:", libContract.address);
+
+  const utxo = await ethers.getContractFactory("UTXO",
+    {
+      libraries: {
+        EllipticCurve: libContract.address,
+      }
+    }
+  );
+
+  const utxoContract = await utxo.deploy();
+  console.log("Contract deployed at:", utxoContract.address);
 }
 
 main()

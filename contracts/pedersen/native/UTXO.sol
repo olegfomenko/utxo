@@ -8,12 +8,10 @@ import "hardhat/console.sol";
 contract UTXO is IUTXO {
     using ECDSA for bytes32;
 
-    uint256 public constant N = 32;
-    uint256 public constant SECP256K1_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
-    uint256 public constant SECP256K1_P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
+    uint256 public constant N = 8;
 
-    ECPoint public H = ECPoint(0x87dd0a2e880b43916d11511797fc9639fa44ebec2e36ee7f711d511745502834, 0x43f58f221b1c62788c28bf8b11bb271fb1f466d5e4ee56d1649414d1ca027bea);
-    ECPoint public G = ECPoint(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798, 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8);
+    ECPoint public H = ECPoint(0x2cb8b246dbf3d5b5d3e9f75f997cd690d205ef2372292508c806d764ee58f4db, 0x1fd7b632da9c73178503346d9ebbb60cc31104b5b8ce33782eaaecaca35c96ba);
+    ECPoint public G = ECPoint(0x2f21e4931451bb6bd8032d52b90a81859fd1abba929df94621a716ebbe3456fd, 0x171c62d5d61cc08d176f2ea3fe42314a89b0196ea6c68ed1d9a4c426d47c3232);
 
     UTXO[] public utxos;
 
@@ -113,24 +111,6 @@ contract UTXO is IUTXO {
     }
 
 
-    // function verifyWitness(ECPoint memory _commitment, Witness memory _witness, bytes32 _hash) internal view {
-    //     ECPoint[] memory _data = new ECPoint[](2);
-    //     _data[0] = _commitment;
-    //     _data[1] = _witness._r;
-
-    //     bytes32 _e  = keccak256(abi.encodePacked(hash(_data), _hash));
-
-    //     (uint256 _x1, uint256 _y1) = ecScallarMul(_commitment._x, _commitment._y, uint256(_e));
-    //     (_x1, _y1) = ecAdd(_x1, _y1, _witness._r._x, _witness._r._y);
-
-    //     (uint256 _hvx, uint256 _hvy) = ecScallarMul(H._x, H._y, _witness._v);
-    //     (uint256 _gux, uint256 _guy) = ecBaseScallarMul(_witness._u);
-    //     (uint256 _x2, uint256 _y2) = ecAdd(_hvx, _hvy, _gux, _guy);
-
-    //     require(_x1 == _x2, "witnes verification falied: x");
-    //     require(_y1 == _y2, "witnes verification falied: y");
-    // }
-
     function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) public view {
         require(_proof._c.length == N, "invalid _c length");
         require(_proof._s.length == N, "invalid _s length");
@@ -160,7 +140,7 @@ contract UTXO is IUTXO {
         bytes32 _e0 = hashPoints(_r);
 
         (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
-        for (uint _i = 1; _i < N; _i++) { 
+        for (uint _i = 1; _i < N; _i++) {
             (_x, _y) = ecAdd(_x, _y, _proof._c[_i]._x, _proof._c[_i]._y);
         }
 
@@ -170,20 +150,22 @@ contract UTXO is IUTXO {
     }
 
     function ecBaseScallarMul(uint256 _k) internal view returns (uint256, uint256) {
-        //return EllipticCurve.ecMul(_k, G._x, G._y, 0, SECP256K1_ORDER);
         return ecScallarMul(G._x, G._y, _k);
     }
 
-    function ecScallarMul(uint256 _x, uint256 _y, uint256 _k) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecMul(_k, _x, _y, 0, SECP256K1_P);
+    function ecScallarMul(uint256 _x, uint256 _y, uint256 _k) internal view returns (uint256, uint256) {
+        uint256[2] memory _res = EllipticCurve.ecMul([_x, _y], _k);
+        return (_res[0], _res[1]);
     }
 
-    function ecAdd(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecAdd(_x1, _y1, _x2, _y2, 0, SECP256K1_P);
+    function ecAdd(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal view returns (uint256, uint256) {
+        uint256[2] memory _res = EllipticCurve.ecAdd([_x1, _y1], [_x2, _y2]);
+        return (_res[0], _res[1]);
     }
 
-    function ecSub(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal pure returns (uint256, uint256) {
-        return EllipticCurve.ecSub(_x1, _y1, _x2, _y2, 0, SECP256K1_P);
+    function ecSub(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal view returns (uint256, uint256) {
+        _y2 = (EllipticCurve.P - _y2) % EllipticCurve.P;
+        return ecAdd(_x1, _y1, _x2, _y2);
     }
 
     function pow2(uint256 _i) internal pure returns (uint256)  {
@@ -200,7 +182,7 @@ contract UTXO is IUTXO {
     }
 
     function hash(bytes memory _data) internal pure returns (bytes32) {
-        bytes32(uint256(keccak256(_data)) % SECP256K1_P);
+        return bytes32(uint256(keccak256(_data)) % EllipticCurve.N);
     }
 }
     
