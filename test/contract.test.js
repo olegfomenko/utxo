@@ -1,7 +1,7 @@
 const UTXO = artifacts.require("UTXO");
 const EllipticCurve = artifacts.require("EllipticCurve");
 const BigNumber = require("bignumber.js");
-const {ethers} = require("hardhat");
+const { ethers } = require("hardhat");
 
 describe("UTXO", () => {
 
@@ -74,11 +74,11 @@ describe("UTXO", () => {
   });
 
   it("Deposit 100wei", async () => {
-    await utxoContract.deposit(key, keyWitness, {value: "100"});
+    await utxoContract.deposit(key, keyWitness, { value: "100" });
     await utxoContract.utxos(0);
   });
 
-  it("Range proof", async() => {
+  it("Range proof", async () => {
     await utxoContract.verifyRangeProof(commitment, proof);
   });
 
@@ -87,11 +87,11 @@ describe("UTXO", () => {
     await utxoContract.utxos(0);
   });
 
-  it("Check witness", async() => {
+  it("Check witness", async () => {
     await utxoContract.verifyWitness(
-      {"_x": "15639559675625734025795989354902210429480226575270834412335467657634556514696", "_y": "13808122845547863717923179222109646155746415390670120415468336630118037023431"},
+      { "_x": "15639559675625734025795989354902210429480226575270834412335467657634556514696", "_y": "13808122845547863717923179222109646155746415390670120415468336630118037023431" },
       {
-        "_r": {"_x": "5109730908197937793186988043505009936047779970479868047734172723071291139481", "_y": "5695537219841674439580460240695926440179084672260849397819152443008669244519"},
+        "_r": { "_x": "5109730908197937793186988043505009936047779970479868047734172723071291139481", "_y": "5695537219841674439580460240695926440179084672260849397819152443008669244519" },
         "_s": "17334092223146687468005548295017179129455424012029209148307492557995637382354",
       },
       "0x2bdad7e530f187ef2cb15881f641bb9020c9b9ee163a934d4b49e7d916baadf9"
@@ -99,7 +99,7 @@ describe("UTXO", () => {
   });
 
   it("Deposit & Withdraw", async () => {
-    await utxoContract.deposit(key, keyWitness, {value: "100"});
+    await utxoContract.deposit(key, keyWitness, { value: "100" });
     let u = await utxoContract.utxos(0);
     assert.equal(u._valuable, true);
 
@@ -122,7 +122,7 @@ describe("UTXO", () => {
 
 
   it("Deposit & Initialize & Transfer", async () => {
-    await utxoContract.deposit(key, keyWitness, {value: "100"});
+    await utxoContract.deposit(key, keyWitness, { value: "100" });
     await utxoContract.initialize(commitment, proof);
 
     let input = await utxoContract.utxos(0);

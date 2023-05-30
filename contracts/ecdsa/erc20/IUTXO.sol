@@ -4,9 +4,8 @@ pragma solidity ^0.8.0;
  * @title UTXO-ERC20 interface
  */
 interface IUTXO {
-
     /// @notice UTXO entry contains information about utxo stored in the contract state.
-    /// The following information will be stored: token address and corresponding token amount, 
+    /// The following information will be stored: token address and corresponding token amount,
     /// owner of the UTXO and spend flag.
     struct UTXO {
         address _token;
@@ -15,7 +14,7 @@ interface IUTXO {
         bool _spent;
     }
 
-    /// @notice OUTPUT contains information about UTXO to be created with. 
+    /// @notice OUTPUT contains information about UTXO to be created with.
     struct OUTPUT {
         uint256 _amount;
         address _owner;
@@ -34,7 +33,11 @@ interface IUTXO {
     /// @param _token ERC20 token address to deposit
     /// @param _amount total amount to deposit
     /// @param _outs array of UTXO information to be created
-    function deposit(address _token, uint256 _amount, OUTPUT[] memory _outs) external;
+    function deposit(
+        address _token,
+        uint256 _amount,
+        OUTPUT[] memory _outs
+    ) external;
 
     /// @notice Withdraw ERC20 token from the contract balance.
     /// @param _input UTXO to withdraw
@@ -44,21 +47,18 @@ interface IUTXO {
     /// @notice Transfer token from one UTXO to another
     /// @param _inputs input UTXOs
     /// @param _outputs output UTXOs
-    function transfer(INPUT[] memory _inputs, OUTPUT[] memory _outputs) external;
+    function transfer(
+        INPUT[] memory _inputs,
+        OUTPUT[] memory _outputs
+    ) external;
 
     /// @notice Get UTXO by id
     /// @param _id UTXO id
     function utxo(uint256 _id) external view returns (UTXO memory);
 
-    event UTXOCreated(
-        uint256 indexed id,
-        address indexed creator
-    );
+    event UTXOCreated(uint256 indexed id, address indexed creator);
 
-    event UTXOSpent(
-        uint256 indexed id,
-        address indexed spender
-    );
+    event UTXOSpent(uint256 indexed id, address indexed spender);
 
     event Deposited(
         address indexed token,
@@ -66,9 +66,5 @@ interface IUTXO {
         uint256 amount
     );
 
-    event Withdrawn(
-        address indexed token,
-        address indexed to,
-        uint256 amount
-    );
+    event Withdrawn(address indexed token, address indexed to, uint256 amount);
 }

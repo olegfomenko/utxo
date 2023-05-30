@@ -11,7 +11,7 @@ Explore [back-maxwell-rangeproof](https://github.com/olegfomenko/back-maxwell-ra
 Proof and Signature generation examples. 
 
 ## UTXO ECDSA (ERC20)
-The `./contracts/pedersen` contains Solidity implementation of UTXO for ERC20 transfers managed with ECDSA secp256k1 signature.
+The `./contracts/ecdsa` contains Solidity implementation of UTXO for ERC20 transfers managed with ECDSA secp256k1 signature.
 
 ## Common
 
