@@ -75,8 +75,7 @@ describe("UTXO", () => {
 
   it("Deposit 100wei", async () => {
     await utxoContract.deposit(key, keyWitness, {value: "100"});
-    let utxoCreated = await utxoContract.utxos(0);
-    console.log(utxoCreated);
+    await utxoContract.utxos(0);
   });
 
   it("Range proof", async() => {
@@ -85,8 +84,7 @@ describe("UTXO", () => {
 
   it("Initialize UTXO", async () => {
     await utxoContract.initialize(commitment, proof);
-    let utxoCreated = await utxoContract.utxos(0);
-    console.log(utxoCreated);
+    await utxoContract.utxos(0);
   });
 
   it("Check witness", async() => {

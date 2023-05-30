@@ -17,6 +17,7 @@ contract UTXO is IUTXO {
     UTXO[] public utxos;
 
     function initialize(EllipticCurve.ECPoint memory _commitment, Proof memory _proof) public override returns (uint256) {
+        require(EllipticCurve.onCurve(_commitment), "commitment is not on alt_bn128 curve");
         verifyRangeProof(_commitment, _proof);
         uint256 _id = utxos.length;
         utxos.push(UTXO(_commitment, false));
@@ -24,6 +25,7 @@ contract UTXO is IUTXO {
     }
 
     function deposit(EllipticCurve.ECPoint memory _publicKey, Witness memory _witness) payable public override returns (uint256) {
+        require(EllipticCurve.onCurve(_publicKey), "publicKey is not on alt_bn128 curve");
         verifyWitness(_publicKey, _witness, DEPOSIT_HASH);
 
         EllipticCurve.ECPoint memory _p = H.ecMul(msg.value);

@@ -88,15 +88,11 @@ library EllipticCurve {
 		return ECPoint(_p._x, P - (_p._y % P));
 	}
 
-    function onCurve(uint256 x, uint256 y) public pure returns(bool) {
-        uint256 beta = mulmod(x, x, P);
-        beta = mulmod(beta, x, P);
+    function onCurve(ECPoint memory _p) public pure returns(bool) {
+        uint256 beta = mulmod(_p._x, _p._x, P);
+        beta = mulmod(beta, _p._x, P);
         beta = addmod(beta, 3, P);
 
-        return onCurveBeta(beta, y);
-    }
-
-    function onCurveBeta(uint256 beta, uint256 y) public pure returns(bool) {
-        return beta == mulmod(y, y, P);
+        return beta == mulmod(_p._y, _p._y, P);
     }
 }
