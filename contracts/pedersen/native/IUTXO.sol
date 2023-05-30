@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "../EllipticCurve.sol";
@@ -29,23 +30,38 @@ interface IUTXO {
     /// No information about amount is required. The Back-Maxwell range proof should be valid.
     /// @param _commitment Pedersen commitment point.
     /// @param _proof  Back-Maxwell range proof.
-    function initialize(EllipticCurve.ECPoint memory _commitment, Proof memory _proof) external returns (uint256);
+    function initialize(
+        EllipticCurve.ECPoint memory _commitment,
+        Proof memory _proof
+    ) external returns (uint256);
 
     /// @notice Deposit ETH and create corresponding UTXO.
     /// @param _publicKey Public key: `prv * G`.
     /// @param _witness Schnorr signature for provided public key.
-    function deposit(EllipticCurve.ECPoint memory _publicKey, Witness memory _witness) payable external returns (uint256);
+    function deposit(
+        EllipticCurve.ECPoint memory _publicKey,
+        Witness memory _witness
+    ) external payable returns (uint256);
 
     /// @notice Withdraw UTXO.
     /// @param _id UTXO index.
     /// @param _to  Receiver address
     /// @param _amount amount in wei to withdraw.
     /// @param _witness Schnorr signature for UTXO public key.
-    function withdraw(uint256 _id, address payable _to, uint256 _amount,  Witness memory _witness) external;
+    function withdraw(
+        uint256 _id,
+        address payable _to,
+        uint256 _amount,
+        Witness memory _witness
+    ) external;
 
     /// @notice Transfer ETH (anonymous)
     /// @param _inputs Input UTXO index.
     /// @param _outputs Output UTXO index.
     /// @param _witness Schnorr signature for aggregated (output - input) public key.
-    function transfer(uint256[] memory _inputs, uint256[] memory _outputs, Witness memory _witness) external;
+    function transfer(
+        uint256[] memory _inputs,
+        uint256[] memory _outputs,
+        Witness memory _witness
+    ) external;
 }
