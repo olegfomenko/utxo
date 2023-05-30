@@ -11,6 +11,7 @@ npm install @openzeppelin/contracts
 npx hardhat compile
 npx hardhat run scripts/deploy.js --network sepolia
 npx hardhat verify --network sepolia 0xE8d7C93934d1cC5bE96b5B3046a4DB1971339123
+npx hardhat test
 ```
 
 ## UTXO Pedersen Commitment (ETH)

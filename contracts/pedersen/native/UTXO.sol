@@ -7,31 +7,30 @@ import "hardhat/console.sol";
 
 contract UTXO is IUTXO {
     using ECDSA for bytes32;
+    using EllipticCurve for EllipticCurve.ECPoint;
 
     uint256 public constant N = 8;
     bytes32 public constant DEPOSIT_HASH = 0x2a50cec61cf2e3d092043e80d8a7623335ebd3c95917e08b59b0126ccd01011d;
 
-    ECPoint public H = ECPoint(0x2cb8b246dbf3d5b5d3e9f75f997cd690d205ef2372292508c806d764ee58f4db, 0x1fd7b632da9c73178503346d9ebbb60cc31104b5b8ce33782eaaecaca35c96ba);
-    ECPoint public G = ECPoint(0x2f21e4931451bb6bd8032d52b90a81859fd1abba929df94621a716ebbe3456fd, 0x171c62d5d61cc08d176f2ea3fe42314a89b0196ea6c68ed1d9a4c426d47c3232);
+    EllipticCurve.ECPoint public H = EllipticCurve.ECPoint(EllipticCurve.Hx, EllipticCurve.Hy);
 
     UTXO[] public utxos;
 
-    function initialize(ECPoint memory _commitment, Proof memory _proof) public override returns (uint256) {
+    function initialize(EllipticCurve.ECPoint memory _commitment, Proof memory _proof) public override returns (uint256) {
         verifyRangeProof(_commitment, _proof);
         uint256 _id = utxos.length;
         utxos.push(UTXO(_commitment, false));
         return _id;
     }
 
-    function deposit(ECPoint memory _publicKey, Witness memory _witness) payable public override returns (uint256) {
+    function deposit(EllipticCurve.ECPoint memory _publicKey, Witness memory _witness) payable public override returns (uint256) {
         verifyWitness(_publicKey, _witness, DEPOSIT_HASH);
 
-        (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, msg.value);
-        (_x, _y) = ecAdd(_x, _y, _publicKey._x, _publicKey._y);
+        EllipticCurve.ECPoint memory _p = H.ecMul(msg.value);
+        _p = _p.ecAdd(_publicKey);
 
         uint256 _id = utxos.length;
-        utxos.push(UTXO(ECPoint(_x, _y), true));
-
+        utxos.push(UTXO(_p, true));
         return _id;
     }
 
@@ -39,11 +38,11 @@ contract UTXO is IUTXO {
         UTXO memory _utxo = utxos[_id];
         require(_utxo._valuable, "utxo should be valuable");
 
-        (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, _amount);
-        (_x, _y) = ecSub(_utxo._c._x, _utxo._c._y, _x, _y);
+        EllipticCurve.ECPoint memory _p = H.ecMul(_amount);
+        _p = _utxo._c.ecSub(_p);
 
         bytes32 _hash = hash(abi.encodePacked(_id, _to));
-        verifyWitness(ECPoint(_x, _y), _witness, _hash);
+        verifyWitness(_p, _witness, _hash);
 
         _utxo._valuable = false;
         utxos[_id] = _utxo;
@@ -52,9 +51,7 @@ contract UTXO is IUTXO {
     }
 
     function transfer(uint256[] memory _inputs, uint256[] memory _outputs, Witness memory _witness) public override{
-        uint256 _x;
-        uint256 _y;
-
+        EllipticCurve.ECPoint memory _p;
         bytes memory _data;
 
         for (uint _i = 0; _i < _outputs.length; _i++) {
@@ -67,11 +64,11 @@ contract UTXO is IUTXO {
             _data = abi.encodePacked(_data, _outputs[_i]);
 
             if(_i == 0){
-                (_x, _y) = (_utxo._c._x, _utxo._c._y);
+                _p = _utxo._c;
                 continue;
             }
 
-            (_x, _y) = ecAdd(_utxo._c._x, _utxo._c._y, _x, _y);
+            _p = _p.ecAdd(_utxo._c);
         }
 
         _data = abi.encodePacked(_data, "constant string");
@@ -83,82 +80,61 @@ contract UTXO is IUTXO {
             utxos[_inputs[_i]] = _utxo;
 
             _data = abi.encodePacked(_data, _inputs[_i]);
-            (_x, _y) = ecSub(_x, _y, _utxo._c._x, _utxo._c._y);
+            _p = _p.ecSub(_utxo._c);
         }
 
         bytes32 _hash = hash(_data);
-        verifyWitness(ECPoint(_x, _y), _witness, _hash);
+        verifyWitness(_p, _witness, _hash);
     }
 
-    function getAddress(ECPoint memory _publicKey) internal pure returns (address) {
+    function getAddress(EllipticCurve.ECPoint memory _publicKey) internal pure returns (address) {
         bytes32 _hash = keccak256(abi.encodePacked(_publicKey._x, _publicKey._y));
         return address(uint160(bytes20(_hash)));
     }
 
-    function verifyWitness(ECPoint memory _key, Witness memory _witness, bytes32 _hash) public view {
-        (uint256 _x1, uint256 _y1) = ecBaseScalarMul(_witness._s);
+    function verifyWitness(EllipticCurve.ECPoint memory _key, Witness memory _witness, bytes32 _hash) public view {
+        EllipticCurve.ECPoint memory _p1 = EllipticCurve.ecBaseMul(_witness._s);
         _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
 
-        (uint256 _x2, uint256 _y2) = ecScalarMul(_key._x, _key._y, uint256(_hash));
-        (_x2, _y2) = ecSub(_witness._r._x, _witness._r._y, _x2, _y2);
-
-        require(_x1 == _x2, "witness verification failed: x");
-        require(_y1 == _y2, "witness verification failed: y");
+        EllipticCurve.ECPoint memory _p2 = _key.ecMul(uint256(_hash));
+        _p2 = _witness._r.ecSub(_p2);
+        require(_p1._x == _p2._x, "witness verification failed: x");
+        require(_p1._y == _p2._y, "witness verification failed: y");
     }
 
-    function verifyRangeProof(ECPoint memory _commitment, Proof memory _proof) public view {
+    function verifyRangeProof(EllipticCurve.ECPoint memory _commitment, Proof memory _proof) public view {
         require(_proof._c.length == N, "invalid _c length");
         require(_proof._s.length == N, "invalid _s length");
 
-        ECPoint[] memory _r = new ECPoint[](N);
+        EllipticCurve.ECPoint[] memory _r = new EllipticCurve.ECPoint[](N);
 
         for (uint256 _i = 0; _i < N; _i++) {
-            (uint256 _sigX, uint256 _sigY) = ecBaseScalarMul(_proof._s[_i]);
-            (uint256 _x, uint256 _y) = ecScalarMul(H._x, H._y, pow2(_i));
-            (_x, _y) = ecSub(_proof._c[_i]._x, _proof._c[_i]._y, _x, _y);
-            (_x, _y) = ecScalarMul(_x, _y, _proof._e0);
-            (_x, _y) = ecSub(_sigX, _sigY, _x, _y);
+            EllipticCurve.ECPoint memory _sig = EllipticCurve.ecBaseMul(_proof._s[_i]);
+            EllipticCurve.ECPoint memory _p = H.ecMul(pow2(_i));
+            _p = _proof._c[_i].ecSub(_p);
+            _p = _p.ecMul( _proof._e0);
+            _p = _sig.ecSub(_p);
 
-            bytes32 _ei = hash(abi.encodePacked(_x, _y));
-            (_x, _y) = ecScalarMul(_proof._c[_i]._x, _proof._c[_i]._y, uint256(_ei));
-            _r[_i] = ECPoint(_x, _y);
+            bytes32 _ei = hash(abi.encodePacked(_p._x, _p._y));
+            _r[_i] = _proof._c[_i].ecMul(uint256(_ei));
         }
 
         bytes32 _e0 = hashPoints(_r);
-        (uint256 _x, uint256 _y) = (_proof._c[0]._x, _proof._c[0]._y);
+        EllipticCurve.ECPoint memory _com = _proof._c[0];
         for (uint _i = 1; _i < N; _i++) {
-            (_x, _y) = ecAdd(_x, _y, _proof._c[_i]._x, _proof._c[_i]._y);
+            _com = _com.ecAdd(_proof._c[_i]);
         }
 
         require(uint256(_e0) == _proof._e0, "failed to verify proof: e0");
-        require(_x == _commitment._x,"failed to verify proof: x");
-        require(_y == _commitment._y,"failed to verify proof: y");
-    }
-
-    function ecBaseScalarMul(uint256 _k) internal view returns (uint256, uint256) {
-        return ecScalarMul(G._x, G._y, _k);
-    }
-
-    function ecScalarMul(uint256 _x, uint256 _y, uint256 _k) internal view returns (uint256, uint256) {
-        uint256[2] memory _res = EllipticCurve.ecMul([_x, _y], _k);
-        return (_res[0], _res[1]);
-    }
-
-    function ecAdd(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal view returns (uint256, uint256) {
-        uint256[2] memory _res = EllipticCurve.ecAdd([_x1, _y1], [_x2, _y2]);
-        return (_res[0], _res[1]);
-    }
-
-    function ecSub(uint256 _x1, uint256 _y1, uint256 _x2, uint256 _y2) internal view returns (uint256, uint256) {
-        uint256[2] memory _negP2 = EllipticCurve.ecNeg([_x2, _y2]);
-        return ecAdd(_x1, _y1, _negP2[0], _negP2[1]);
+        require(_com._x == _commitment._x,"failed to verify proof: x");
+        require(_com._y == _commitment._y,"failed to verify proof: y");
     }
 
     function pow2(uint256 _i) internal pure returns (uint256)  {
         return uint256(2) ** _i;
     }
 
-    function hashPoints(ECPoint[] memory _points) internal pure returns (bytes32) {
+    function hashPoints(EllipticCurve.ECPoint[] memory _points) internal pure returns (bytes32) {
         bytes memory _data;
         for (uint _i = 0; _i < _points.length; _i++) {
             _data = abi.encodePacked(_data, _points[_i]._x, _points[_i]._y);
