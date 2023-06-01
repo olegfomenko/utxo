@@ -9,7 +9,7 @@ contract UTXO is IUTXO {
     using ECDSA for bytes32;
     using EllipticCurve for EllipticCurve.ECPoint;
 
-    uint256 public constant N = 8;
+    uint256 public constant N = 128;
     bytes32 public constant DEPOSIT_HASH =
         0x2a50cec61cf2e3d092043e80d8a7623335ebd3c95917e08b59b0126ccd01011d;
 
@@ -139,8 +139,8 @@ contract UTXO is IUTXO {
         EllipticCurve.ECPoint memory _commitment,
         Proof memory _proof
     ) public view {
-        require(_proof._c.length == N, "invalid _c length");
-        require(_proof._s.length == N, "invalid _s length");
+        require(_proof._c.length == N, "invalid _c length got: ");
+        require(_proof._s.length == N, "invalid _s length got: ");
 
         EllipticCurve.ECPoint[] memory _r = new EllipticCurve.ECPoint[](N);
 
@@ -169,12 +169,12 @@ contract UTXO is IUTXO {
     }
 
     function pow2(uint256 _i) internal pure returns (uint256) {
-        return uint256(2) ** _i;
+        return (uint256(2) ** _i) % EllipticCurve.N;
     }
 
     function hashPoints(
         EllipticCurve.ECPoint[] memory _points
-    ) internal pure returns (bytes32) {
+    ) public view returns (bytes32) {
         bytes memory _data;
         for (uint _i = 0; _i < _points.length; _i++) {
             _data = abi.encodePacked(_data, _points[_i]._x, _points[_i]._y);
