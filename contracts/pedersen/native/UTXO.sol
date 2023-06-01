@@ -40,6 +40,9 @@ contract UTXO is IUTXO {
             EllipticCurve.onCurve(_publicKey),
             "publicKey is not on alt_bn128 curve"
         );
+
+        require(msg.value <= pow2(N) - 1, "amount bigger then 2^N - 1");
+
         verifyWitness(_publicKey, _witness, DEPOSIT_HASH);
 
         EllipticCurve.ECPoint memory _p = H.ecMul(msg.value);
@@ -169,7 +172,7 @@ contract UTXO is IUTXO {
     }
 
     function pow2(uint256 _i) internal pure returns (uint256) {
-        return (uint256(2) ** _i) % EllipticCurve.N;
+        return uint256(2) ** _i;
     }
 
     function hashPoints(
