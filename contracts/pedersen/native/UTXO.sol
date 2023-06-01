@@ -174,7 +174,7 @@ contract UTXO is IUTXO {
 
     function hashPoints(
         EllipticCurve.ECPoint[] memory _points
-    ) public view returns (bytes32) {
+    ) public pure returns (bytes32) {
         bytes memory _data;
         for (uint _i = 0; _i < _points.length; _i++) {
             _data = abi.encodePacked(_data, _points[_i]._x, _points[_i]._y);
