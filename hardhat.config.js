@@ -18,6 +18,10 @@ module.exports = {
         mnemonic: "joy cave salute upon change order degree excite clog drive electric lottery",
       },
     },
+    local: {
+      url: "http://localhost:8545",
+      accounts: ["90...caa"]
+    },
   },
   etherscan: {
     url: "",
