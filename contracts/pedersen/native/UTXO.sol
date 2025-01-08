@@ -130,7 +130,7 @@ contract UTXO is IUTXO {
         bytes32 _hash
     ) public view {
         EllipticCurve.ECPoint memory _p1 = EllipticCurve.ecBaseMul(_witness._s);
-        _hash = hash(abi.encodePacked(_hash, _key._x, _key._y));
+        _hash = hash(abi.encodePacked(_hash, _key._x, _key._y, _witness._r._x, _witness._r._y));
 
         EllipticCurve.ECPoint memory _p2 = _key.ecMul(uint256(_hash));
         _p2 = _witness._r.ecSub(_p2);
